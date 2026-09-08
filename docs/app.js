@@ -13,11 +13,19 @@
 // 데이터 — 선택지와 안내 문구
 // ═══════════════════════════════════════════════════════════════════════════
 
-// 아포스티유 협약국 전체를 처리하므로, 칩에 없는 나라는 '기타' 로 직접 입력받는다.
-const COUNTRIES = ['미국', '중국', '일본', '베트남', '캐나다', '독일', '호주', '인도네시아', '기타'];
-const COUNTRY_OTHER = '기타';
-const COUNTRY_MAX = 40;
-const DOCS = ['부모여행동의서', '유학 구비서류', '이민 서류', '비자·체류 서류', '정관', '계약서', '위임장(POA)', '경력 서류'];
+// 칩 목록은 자주 오는 것만 보여 주고, 없는 것은 '기타' 로 직접 입력받는다.
+// 아포스티유 협약국 전체를 처리하는데 칩에 8개국만 두면 나머지 나라 고객이 막힌다.
+const OTHER = '기타';
+const COUNTRIES = ['미국', '중국', '일본', '베트남', '캐나다', '독일', '호주', '인도네시아', OTHER];
+const DOCS = ['부모여행동의서', '유학 구비서류', '이민 서류', '비자·체류 서류', '정관', '계약서', '위임장(POA)', '경력 서류', OTHER];
+
+/** '기타' 직접 입력칸의 항목별 설정. maxlength 는 schema.sql 의 길이 검사와 맞춘다. */
+const OTHER_FIELDS = {
+  country: { other: 'countryOther', label: '어느 나라인가요?', 이름: '국가',
+             placeholder: '예: 몽골, 카자흐스탄, 사우디아라비아', max: 40 },
+  doc:     { other: 'docOther',     label: '어떤 서류인가요?', 이름: '서류',
+             placeholder: '예: 혼인관계증명서, 사업자등록증, 재직증명서', max: 60 },
+};
 const CERTS = ['아포스티유', '대사관 인증'];
 
 const TRUST = [
@@ -63,6 +71,7 @@ const state = {
   country: null,
   countryOther: '',   // country === '기타' 일 때 고객이 직접 적는 나라 이름
   doc: null,
+  docOther: '',       // doc === '기타' 일 때 고객이 직접 적는 서류 이름
   cert: '아포스티유',
   name: '',
   phone: '',
@@ -100,10 +109,11 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
 ));
 
-/** 저장·표시에 쓸 국가 이름. '기타' 를 골랐으면 직접 적은 이름을 쓴다. */
-function pickedCountry() {
-  if (state.country === COUNTRY_OTHER) return state.countryOther.trim();
-  return state.country;
+/** 저장·표시에 쓸 값. '기타' 를 골랐으면 고객이 직접 적은 이름을 쓴다.
+ *  그래서 DB 에 `'기타'` 라는 값이 들어가는 일은 없다. */
+function picked(key) {
+  if (state[key] === OTHER) return state[OTHER_FIELDS[key].other].trim();
+  return state[key];
 }
 
 const chain = () => `전문 번역 → 법무법인 공증 촉탁 → ${state.cert} → 발송`;
@@ -120,16 +130,24 @@ function emailLooksValid(v) {
   return v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
+/** '기타' 를 골랐는데 이름을 안 적었거나 너무 긴 경우의 안내 문구. 없으면 null. */
+function otherProblem(key) {
+  if (state[key] !== OTHER) return null;
+  const f = OTHER_FIELDS[key];
+  const v = state[f.other].trim();
+  if (!v) return `${f.이름} 이름을 직접 입력해 주세요.`;
+  if (v.length > f.max) return `${f.이름} 이름이 너무 깁니다. ${f.max}자 안으로 적어 주세요.`;
+  return null;
+}
+
 /** 선택·입력이 제출 가능한 상태인지. 부족하면 안내 문구를 돌려준다. */
 function validate() {
   if (!state.country) return '제출 국가를 선택해 주세요.';
-  if (state.country === COUNTRY_OTHER && !state.countryOther.trim()) {
-    return '제출 국가 이름을 직접 입력해 주세요.';
-  }
-  if (state.countryOther.trim().length > COUNTRY_MAX) {
-    return `국가 이름이 너무 깁니다. ${COUNTRY_MAX}자 안으로 적어 주세요.`;
-  }
+  const c = otherProblem('country');
+  if (c) return c;
   if (!state.doc) return '서류 종류를 선택해 주세요.';
+  const d = otherProblem('doc');
+  if (d) return d;
   if (!state.name.trim()) return '이름을 입력해 주세요.';
   if (!state.phone.trim()) return '연락처를 입력해 주세요.';
   if (!phoneLooksValid(state.phone)) return '연락처를 다시 확인해 주세요.';
@@ -164,8 +182,8 @@ async function saveApplication() {
     body: JSON.stringify({
       p_name: state.name.trim(),
       p_phone: state.phone.trim(),
-      p_country: pickedCountry(),
-      p_doc_type: state.doc,
+      p_country: picked('country'),
+      p_doc_type: picked('doc'),
       p_cert_type: state.cert,
       p_email: state.email.trim() || null,
       p_memo: state.memo.trim() || null,
@@ -217,14 +235,15 @@ function chips(key, items) {
             data-pick="${key}" data-val="${esc(label)}">${esc(label)}</button>`).join('')}</div>`;
 }
 
-/** '기타' 를 골랐을 때만 나타나는 국가 직접 입력칸. */
-function countryOtherField() {
-  if (state.country !== COUNTRY_OTHER) return '';
-  return `<span class="field" style="margin-top:14px;max-width:320px">
-    <label for="f-country-other">어느 나라인가요? <span class="req">*</span></label>
-    <input class="input" id="f-country-other" type="text" maxlength="${COUNTRY_MAX}"
-           placeholder="예: 몽골, 카자흐스탄, 사우디아라비아"
-           data-field="countryOther" value="${esc(state.countryOther)}">
+/** '기타' 를 골랐을 때만 나타나는 직접 입력칸. key 는 'country' 또는 'doc'. */
+function otherField(key) {
+  if (state[key] !== OTHER) return '';
+  const f = OTHER_FIELDS[key];
+  return `<span class="field" style="margin-top:14px;max-width:340px">
+    <label for="f-other-${key}">${esc(f.label)} <span class="req">*</span></label>
+    <input class="input" id="f-other-${key}" type="text" maxlength="${f.max}"
+           placeholder="${esc(f.placeholder)}"
+           data-field="${f.other}" value="${esc(state[f.other])}">
   </span>`;
 }
 
@@ -260,8 +279,8 @@ function summaryCard(extra = '') {
   return `<div class="card elev-md apply-summary" style="padding:26px 28px;background:var(--color-surface)">
     <span class="card-kicker">선택 요약</span>
     <div style="display:grid;gap:10px;margin-top:10px">
-      <span class="summary-row"><span class="summary-key">제출 국가</span><span class="summary-val" data-live="country">${esc(pickedCountry() || '선택 전')}</span></span>
-      <span class="summary-row"><span class="summary-key">서류 종류</span><span class="summary-val">${esc(state.doc ?? '선택 전')}</span></span>
+      <span class="summary-row"><span class="summary-key">제출 국가</span><span class="summary-val" data-live="country">${esc(picked('country') || '선택 전')}</span></span>
+      <span class="summary-row"><span class="summary-key">서류 종류</span><span class="summary-val" data-live="doc">${esc(picked('doc') || '선택 전')}</span></span>
       <span class="summary-row"><span class="summary-key">인증 방식</span><span class="summary-val">${esc(state.cert)}</span></span>
     </div>
     <span style="display:block;margin-top:20px;padding-top:18px;border-top:1px solid var(--color-divider);font-size:12px" class="muted-2">예상 절차</span>
@@ -310,8 +329,8 @@ function screenHome() {
         <span class="card-kicker">30초 견적 시작</span>
         <h3 style="font-size:22px;margin:2px 0 0">어느 나라에 제출하나요?</h3>
         <div style="margin-top:14px">${chips('country', COUNTRIES)}</div>
-        ${countryOtherField()}
-        <p style="font-size:12.5px;margin:18px 0 0" class="muted-2">선택: <span data-live="country">${esc(pickedCountry() || '선택 전')}</span> · 다음 단계에서 서류 종류와 인증 방식을 고릅니다.</p>
+        ${otherField('country')}
+        <p style="font-size:12.5px;margin:18px 0 0" class="muted-2">선택: <span data-live="country">${esc(picked('country') || '선택 전')}</span> · 다음 단계에서 서류 종류와 인증 방식을 고릅니다.</p>
         <button type="button" class="btn btn-primary btn-block" style="font-size:14.5px;padding:12px" data-go="apply">신청 계속하기</button>
       </div>
     </div>
@@ -471,13 +490,16 @@ const STEP_DEFS = [
   { pill: '연락처', title: '어디로 연락드릴까요?', hint: '견적과 진행 안내를 받을 이름과 연락처입니다.' },
 ];
 
-/** 현재 단계에서 다음으로 넘어갈 수 있는지. */
-function stepReady(step) {
-  if (step === 1) return !!pickedCountry() && pickedCountry().length <= COUNTRY_MAX;
-  if (step === 2) return !!state.doc;
-  if (step === 3) return true;
-  return validate() === null;
+/** 현재 단계에서 막고 있는 것. 없으면 null.
+ *  '기타' 를 골라 둔 상태라면 "선택해 주세요" 가 아니라 "이름을 입력해 주세요" 여야 한다. */
+function stepProblem(step) {
+  if (step === 1) return state.country ? otherProblem('country') : '제출 국가를 선택해 주세요.';
+  if (step === 2) return state.doc ? otherProblem('doc') : '서류 종류를 선택해 주세요.';
+  if (step === 3) return null;
+  return validate();
 }
+
+const stepReady = (step) => stepProblem(step) === null;
 
 /** 위저드 버튼 문구. render 와 syncLive 가 같은 값을 쓰도록 한 곳에 둔다. */
 function stepButtonLabel(step) {
@@ -485,7 +507,8 @@ function stepButtonLabel(step) {
   const ok = stepReady(step);
   if (step === STEP_COUNT) return ok ? '상담 신청 보내기' : '이름과 연락처를 입력해 주세요';
   if (ok) return '다음';
-  if (step === 1 && state.country === COUNTRY_OTHER) return '국가 이름을 입력해 주세요';
+  const key = step === 1 ? 'country' : step === 2 ? 'doc' : null;
+  if (key && state[key] === OTHER) return `${OTHER_FIELDS[key].이름} 이름을 입력해 주세요`;
   return '선택해 주세요';
 }
 
@@ -494,8 +517,8 @@ function screenApplyStep() {
   const def = STEP_DEFS[step - 1];
   const ok = stepReady(step);
 
-  const body = step === 1 ? chips('country', COUNTRIES) + countryOtherField()
-    : step === 2 ? chips('doc', DOCS)
+  const body = step === 1 ? chips('country', COUNTRIES) + otherField('country')
+    : step === 2 ? chips('doc', DOCS) + otherField('doc')
     : step === 3 ? chips('cert', CERTS)
     : contactFields();
 
@@ -532,8 +555,8 @@ function screenApplySingle() {
     ${configBanner()}${errorBanner()}
     <div class="two-col">
       <div style="display:grid;gap:28px">
-        <div><h3 style="font-size:19px;margin:0 0 12px">제출 국가 <span class="req">*</span></h3>${chips('country', COUNTRIES)}${countryOtherField()}</div>
-        <div><h3 style="font-size:19px;margin:0 0 12px">서류 종류 <span class="req">*</span></h3>${chips('doc', DOCS)}</div>
+        <div><h3 style="font-size:19px;margin:0 0 12px">제출 국가 <span class="req">*</span></h3>${chips('country', COUNTRIES)}${otherField('country')}</div>
+        <div><h3 style="font-size:19px;margin:0 0 12px">서류 종류 <span class="req">*</span></h3>${chips('doc', DOCS)}${otherField('doc')}</div>
         <div><h3 style="font-size:19px;margin:0 0 12px">인증 방식</h3>${chips('cert', CERTS)}</div>
         <div><h3 style="font-size:19px;margin:0 0 12px">신청자 정보</h3>${contactFields()}</div>
       </div>
@@ -638,15 +661,16 @@ document.addEventListener('click', (e) => {
   if (t.dataset.pick) {
     set({ [t.dataset.pick]: t.dataset.val, error: null });
     // '기타' 를 골랐으면 바로 적을 수 있게 커서를 넣어 준다
-    if (t.dataset.pick === 'country' && t.dataset.val === COUNTRY_OTHER) {
-      document.getElementById('f-country-other')?.focus();
+    if (t.dataset.val === OTHER && OTHER_FIELDS[t.dataset.pick]) {
+      document.getElementById('f-other-' + t.dataset.pick)?.focus();
     }
     return;
   }
   if (t.dataset.set) { set({ [t.dataset.set]: t.dataset.val }); return; }
   if (t.dataset.reset) {
-    set({ orderNo: null, error: null, step: 1, country: null, countryOther: '', doc: null,
-          cert: '아포스티유', name: '', phone: '', email: '', memo: '' });
+    set({ orderNo: null, error: null, step: 1, country: null, countryOther: '',
+          doc: null, docOther: '', cert: '아포스티유',
+          name: '', phone: '', email: '', memo: '' });
     return;
   }
   if (t.dataset.submit) { submit(); return; }
@@ -655,8 +679,9 @@ document.addEventListener('click', (e) => {
   if (t.dataset.step === 'prev') { set({ step: Math.max(1, state.step - 1), error: null }); return; }
   if (t.dataset.step === 'next') {
     if (state.step === STEP_COUNT) { submit(); return; }
-    if (stepReady(state.step)) { set({ step: state.step + 1, error: null }); }
-    else { set({ error: state.step === 1 ? '제출 국가를 선택해 주세요.' : '서류 종류를 선택해 주세요.' }); }
+    const problem = stepProblem(state.step);
+    if (problem) { set({ error: problem }); }
+    else { set({ step: state.step + 1, error: null }); }
   }
 });
 
@@ -664,8 +689,10 @@ document.addEventListener('click', (e) => {
  *  달라지는 부분만 직접 손본다 — 요약에 표시된 국가 이름과 진행 버튼. */
 function syncLive() {
   // '기타' 로 직접 적는 국가 이름은 요약과 안내문에 바로 비친다
-  document.querySelectorAll('[data-live="country"]').forEach((el) => {
-    el.textContent = pickedCountry() || '선택 전';
+  ['country', 'doc'].forEach((key) => {
+    document.querySelectorAll(`[data-live="${key}"]`).forEach((el) => {
+      el.textContent = picked(key) || '선택 전';
+    });
   });
 
   if (state.screen !== 'apply' || state.orderNo || state.sending) return;
@@ -699,7 +726,7 @@ document.addEventListener('keydown', (e) => {
   if (state.screen !== 'apply' || state.sending) return;
   e.preventDefault();
   // 국가 입력칸에서 Enter 는 제출이 아니라 다음 단계로
-  if (f === 'countryOther' && state.flow !== 'single') {
+  if ((f === 'countryOther' || f === 'docOther') && state.flow !== 'single') {
     if (stepReady(state.step)) set({ step: Math.min(state.step + 1, STEP_COUNT), error: null });
     return;
   }
