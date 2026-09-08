@@ -8,6 +8,8 @@
 | 경로 | 무엇인가 |
 | --- | --- |
 | `docs/` | **실동작 웹사이트.** 이걸 인터넷에 올린다. 이름이 `docs` 인 이유는 아래 참고. |
+| `docs/index.html` | 고객 화면 (랜딩·서비스 안내·견적 신청·진행상황 조회) |
+| `docs/admin.html` | 관리자 화면 (로그인 후 접수 목록) |
 | `supabase/schema.sql` | Supabase 에 한 번 실행하는 테이블·함수 정의 |
 | `한결 글로벌문서 프로토타입.dc.html` | 초기 디자인 목업(참고용). 데이터 저장 기능은 없다. |
 | `_ds/organic-.../` | Organic 디자인 시스템 원본 |
@@ -114,15 +116,51 @@ python -m http.server 5173 --directory D:\aiffel_work\HG_global_center\web
 
 ## 쌓인 신청서 보기
 
-Supabase **SQL Editor** 에서:
+### 방법 1 — 관리자 화면 (`admin.html`)
+
+사이트에 붙어 있는 접수 관리 페이지다. 로그인하면 접수 목록이 표로 나오고, 이름·연락처·
+접수번호로 검색하거나 CSV 로 내려받을 수 있다.
+
+* 배포 후 주소: <https://weriousdf.github.io/HG_global_center/admin.html>
+* 로컬: <http://localhost:5173/admin.html>
+
+**처음 한 번, 관리자 계정을 만들어야 한다:**
+
+1. Supabase 대시보드 **Authentication → Users → Add user**.
+   이메일과 비밀번호를 정하고 **Auto Confirm User 를 켠다** (메일 확인 절차 생략).
+2. **SQL Editor** 에서 `supabase/schema.sql` 7번 항목의 주석을 풀고, 본인 이메일로
+   바꿔 실행한다:
+
+   ```sql
+   insert into public.admins (user_id, email)
+   select id, email from auth.users where email = '내이메일@example.com'
+   on conflict (user_id) do nothing;
+   ```
+
+이 두 번째 단계가 핵심이다. **로그인만 했다고 신청서를 볼 수 있는 게 아니라,
+`admins` 표에 등록된 계정이어야 한다.** Supabase 는 회원가입이 열려 있으면 누구나 계정을
+만들 수 있어서, "로그인한 사람" 기준으로 권한을 주면 아무나 신청서를 보게 된다.
+로그인은 됐는데 목록이 비어 있으면 이 등록이 안 된 것이다.
+
+직원이 늘면 1·2단계를 계정마다 반복한다. 권한을 뺄 때는:
+
+```sql
+delete from public.admins where email = '내보낼사람@example.com';
+```
+
+> 관리자 화면은 검색엔진에 노출되지 않는다 (`noindex` + `robots.txt`). 다만 주소를 아는
+> 사람은 로그인 화면까지 볼 수 있다 — 로그인 자체는 Supabase 가 막아 준다.
+
+### 방법 2 — Supabase 대시보드
+
+관리자 화면 없이도 언제든 볼 수 있다. **Table Editor → applications** 에서 표로 보거나
+CSV 로 내려받는다. 또는 **SQL Editor** 에서:
 
 ```sql
 select order_no, created_at, name, phone, country, doc_type, cert_type, status
   from applications
  order by created_at desc;
 ```
-
-**Table Editor → applications** 에서 표로 보거나 CSV 로 내려받아도 된다.
 
 ## 화면 변형 미리보기
 

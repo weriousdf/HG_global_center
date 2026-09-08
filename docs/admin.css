@@ -1,0 +1,35 @@
+/* 접수 관리 화면 전용. site.css 위에 얹는다. */
+
+/* 브라우저 기본 [hidden] 규칙은 명시도가 낮아 .btn 의 display 에 밀린다.
+   el.hidden = true 로 감춘 버튼이 그대로 보이는 원인이었다. */
+[hidden] { display: none !important; }
+
+.login-card { max-width: 400px; margin: 48px auto; padding: 34px 36px; background: var(--color-surface); }
+.login-card h1 { font-size: 26px; margin: 0 0 6px; }
+
+.admin-bar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 0 44px 18px;
+}
+.admin-count { font-family: var(--font-heading); font-size: 22px; }
+.admin-search { min-width: 200px; max-width: 280px; }
+.admin-bar .spacer { margin-left: auto; }
+
+/* 표 — 열이 많아 좁은 화면에서는 가로로 스크롤된다 */
+.admin-table { font-size: 13px; }
+.admin-table td, .admin-table th { white-space: nowrap; }
+.admin-table td.memo {
+  white-space: normal; min-width: 200px; max-width: 320px;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+.admin-table td.order { font-family: ui-monospace, Menlo, monospace; font-weight: 600; }
+.admin-table td.phone { font-family: ui-monospace, Menlo, monospace; }
+.admin-table tr.hidden { display: none; }
+
+.when { font-size: 12px; color: color-mix(in srgb, var(--color-text) 62%, transparent); }
+.empty { padding: 40px 0; text-align: center; }
+
+@media (max-width: 720px) {
+  .login-card { margin: 24px 18px; padding: 26px 24px; }
+  .admin-bar { padding: 0 18px 14px; }
+}

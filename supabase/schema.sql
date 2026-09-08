@@ -96,7 +96,66 @@ revoke all on function public.submit_application(text, text, text, text, text, t
 grant execute on function public.submit_application(text, text, text, text, text, text, text) to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- 5. 확인용 — 대시보드에서 쌓인 신청서 보기
+-- 5. 관리자 명단
+--    "로그인한 사람" 이 아니라 "이 표에 있는 사람" 만 신청서를 읽을 수 있게 한다.
+--    Supabase 는 회원가입이 열려 있으면 누구나 계정을 만들 수 있으므로,
+--    authenticated 역할만으로 권한을 주면 아무나 신청서를 보게 된다.
+--    이 표는 API 로 노출하지 않는다 — 대시보드에서만 손댄다.
+-- ---------------------------------------------------------------------------
+create table if not exists public.admins (
+  user_id  uuid primary key references auth.users(id) on delete cascade,
+  email    text,
+  added_at timestamptz not null default now()
+);
+
+alter table public.admins enable row level security;
+revoke all on public.admins from anon, authenticated;
+
+-- 정책 안에서 admins 를 직접 조회하면 admins 자신의 RLS 에 걸려 항상 거짓이 된다.
+-- security definer 함수로 감싸서 우회한다.
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (select 1 from public.admins where user_id = auth.uid());
+$$;
+
+revoke all on function public.is_admin() from public;
+grant execute on function public.is_admin() to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 6. 관리자만 신청서를 읽는다
+--    3번에서 테이블 권한을 전부 회수했으므로, SELECT 를 다시 주고 정책을 붙인다.
+--    익명 방문자(anon)에게는 여전히 아무 권한도 없다.
+-- ---------------------------------------------------------------------------
+grant select on public.applications to authenticated;
+
+drop policy if exists "관리자만 신청서를 읽는다" on public.applications;
+create policy "관리자만 신청서를 읽는다"
+  on public.applications
+  for select
+  to authenticated
+  using (public.is_admin());
+
+-- ---------------------------------------------------------------------------
+-- 7. 관리자 계정 등록 (한 번만)
+--
+--    (1) 대시보드 Authentication → Users → "Add user" 로 계정을 만든다.
+--        Auto Confirm User 를 켜 두면 메일 확인 절차 없이 바로 쓸 수 있다.
+--    (2) 아래 줄의 주석을 풀고 본인 이메일로 바꿔 실행한다.
+-- ---------------------------------------------------------------------------
+-- insert into public.admins (user_id, email)
+-- select id, email from auth.users where email = 'beefmeat777@gmail.com'
+-- on conflict (user_id) do nothing;
+
+-- 등록된 관리자 확인:
+-- select a.email, a.added_at from public.admins a order by a.added_at;
+
+-- ---------------------------------------------------------------------------
+-- 8. 확인용 — 대시보드에서 쌓인 신청서 보기
 -- ---------------------------------------------------------------------------
 -- select order_no, created_at, name, phone, country, doc_type, cert_type, status
 --   from public.applications order by created_at desc;
