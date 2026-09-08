@@ -72,8 +72,10 @@ begin
   end if;
 
   -- 길이 제한 (장문 투입 방지)
+  -- country 는 '기타' 를 고른 고객이 직접 적는 자유 입력이므로 특히 필요하다.
   if length(p_name) > 60 or length(p_phone) > 40
-     or length(coalesce(p_email, '')) > 120 or length(coalesce(p_memo, '')) > 2000 then
+     or length(coalesce(p_email, '')) > 120 or length(coalesce(p_memo, '')) > 2000
+     or length(p_country) > 40 or length(p_doc_type) > 60 or length(p_cert_type) > 40 then
     raise exception '입력값이 너무 깁니다.';
   end if;
 

@@ -13,7 +13,10 @@
 // 데이터 — 선택지와 안내 문구
 // ═══════════════════════════════════════════════════════════════════════════
 
-const COUNTRIES = ['미국', '중국', '일본', '베트남', '캐나다', '독일', '호주', '인도네시아'];
+// 아포스티유 협약국 전체를 처리하므로, 칩에 없는 나라는 '기타' 로 직접 입력받는다.
+const COUNTRIES = ['미국', '중국', '일본', '베트남', '캐나다', '독일', '호주', '인도네시아', '기타'];
+const COUNTRY_OTHER = '기타';
+const COUNTRY_MAX = 40;
 const DOCS = ['부모여행동의서', '유학 구비서류', '이민 서류', '비자·체류 서류', '정관', '계약서', '위임장(POA)', '경력 서류'];
 const CERTS = ['아포스티유', '대사관 인증'];
 
@@ -58,6 +61,7 @@ const state = {
   // 신청 선택값
   step: 1,
   country: null,
+  countryOther: '',   // country === '기타' 일 때 고객이 직접 적는 나라 이름
   doc: null,
   cert: '아포스티유',
   name: '',
@@ -96,6 +100,12 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
 ));
 
+/** 저장·표시에 쓸 국가 이름. '기타' 를 골랐으면 직접 적은 이름을 쓴다. */
+function pickedCountry() {
+  if (state.country === COUNTRY_OTHER) return state.countryOther.trim();
+  return state.country;
+}
+
 const chain = () => `전문 번역 → 법무법인 공증 촉탁 → ${state.cert} → 발송`;
 const eta = () => (state.cert === '대사관 인증' ? '7–10 영업일' : '4–6 영업일');
 
@@ -113,6 +123,12 @@ function emailLooksValid(v) {
 /** 선택·입력이 제출 가능한 상태인지. 부족하면 안내 문구를 돌려준다. */
 function validate() {
   if (!state.country) return '제출 국가를 선택해 주세요.';
+  if (state.country === COUNTRY_OTHER && !state.countryOther.trim()) {
+    return '제출 국가 이름을 직접 입력해 주세요.';
+  }
+  if (state.countryOther.trim().length > COUNTRY_MAX) {
+    return `국가 이름이 너무 깁니다. ${COUNTRY_MAX}자 안으로 적어 주세요.`;
+  }
   if (!state.doc) return '서류 종류를 선택해 주세요.';
   if (!state.name.trim()) return '이름을 입력해 주세요.';
   if (!state.phone.trim()) return '연락처를 입력해 주세요.';
@@ -148,7 +164,7 @@ async function saveApplication() {
     body: JSON.stringify({
       p_name: state.name.trim(),
       p_phone: state.phone.trim(),
-      p_country: state.country,
+      p_country: pickedCountry(),
       p_doc_type: state.doc,
       p_cert_type: state.cert,
       p_email: state.email.trim() || null,
@@ -201,6 +217,17 @@ function chips(key, items) {
             data-pick="${key}" data-val="${esc(label)}">${esc(label)}</button>`).join('')}</div>`;
 }
 
+/** '기타' 를 골랐을 때만 나타나는 국가 직접 입력칸. */
+function countryOtherField() {
+  if (state.country !== COUNTRY_OTHER) return '';
+  return `<span class="field" style="margin-top:14px;max-width:320px">
+    <label for="f-country-other">어느 나라인가요? <span class="req">*</span></label>
+    <input class="input" id="f-country-other" type="text" maxlength="${COUNTRY_MAX}"
+           placeholder="예: 몽골, 카자흐스탄, 사우디아라비아"
+           data-field="countryOther" value="${esc(state.countryOther)}">
+  </span>`;
+}
+
 function banner(kind, title, body) {
   return `<div class="banner banner-${kind}"><span class="banner-title">${esc(title)}</span>${body}</div>`;
 }
@@ -233,7 +260,7 @@ function summaryCard(extra = '') {
   return `<div class="card elev-md apply-summary" style="padding:26px 28px;background:var(--color-surface)">
     <span class="card-kicker">선택 요약</span>
     <div style="display:grid;gap:10px;margin-top:10px">
-      <span class="summary-row"><span class="summary-key">제출 국가</span><span class="summary-val">${esc(state.country ?? '선택 전')}</span></span>
+      <span class="summary-row"><span class="summary-key">제출 국가</span><span class="summary-val" data-live="country">${esc(pickedCountry() || '선택 전')}</span></span>
       <span class="summary-row"><span class="summary-key">서류 종류</span><span class="summary-val">${esc(state.doc ?? '선택 전')}</span></span>
       <span class="summary-row"><span class="summary-key">인증 방식</span><span class="summary-val">${esc(state.cert)}</span></span>
     </div>
@@ -283,7 +310,8 @@ function screenHome() {
         <span class="card-kicker">30초 견적 시작</span>
         <h3 style="font-size:22px;margin:2px 0 0">어느 나라에 제출하나요?</h3>
         <div style="margin-top:14px">${chips('country', COUNTRIES)}</div>
-        <p style="font-size:12.5px;margin:18px 0 0" class="muted-2">선택: ${esc(state.country ?? '선택 전')} · 다음 단계에서 서류 종류와 인증 방식을 고릅니다.</p>
+        ${countryOtherField()}
+        <p style="font-size:12.5px;margin:18px 0 0" class="muted-2">선택: <span data-live="country">${esc(pickedCountry() || '선택 전')}</span> · 다음 단계에서 서류 종류와 인증 방식을 고릅니다.</p>
         <button type="button" class="btn btn-primary btn-block" style="font-size:14.5px;padding:12px" data-go="apply">신청 계속하기</button>
       </div>
     </div>
@@ -445,26 +473,33 @@ const STEP_DEFS = [
 
 /** 현재 단계에서 다음으로 넘어갈 수 있는지. */
 function stepReady(step) {
-  if (step === 1) return !!state.country;
+  if (step === 1) return !!pickedCountry() && pickedCountry().length <= COUNTRY_MAX;
   if (step === 2) return !!state.doc;
   if (step === 3) return true;
   return validate() === null;
 }
 
+/** 위저드 버튼 문구. render 와 syncLive 가 같은 값을 쓰도록 한 곳에 둔다. */
+function stepButtonLabel(step) {
+  if (state.sending) return '보내는 중…';
+  const ok = stepReady(step);
+  if (step === STEP_COUNT) return ok ? '상담 신청 보내기' : '이름과 연락처를 입력해 주세요';
+  if (ok) return '다음';
+  if (step === 1 && state.country === COUNTRY_OTHER) return '국가 이름을 입력해 주세요';
+  return '선택해 주세요';
+}
+
 function screenApplyStep() {
   const step = Math.min(Math.max(state.step, 1), STEP_COUNT);
   const def = STEP_DEFS[step - 1];
-  const last = step === STEP_COUNT;
   const ok = stepReady(step);
 
-  const body = step === 1 ? chips('country', COUNTRIES)
+  const body = step === 1 ? chips('country', COUNTRIES) + countryOtherField()
     : step === 2 ? chips('doc', DOCS)
     : step === 3 ? chips('cert', CERTS)
     : contactFields();
 
-  const nextLabel = state.sending ? '보내는 중…'
-    : last ? (ok ? '상담 신청 보내기' : '이름과 연락처를 입력해 주세요')
-    : (ok ? '다음' : '선택해 주세요');
+  const nextLabel = stepButtonLabel(step);
 
   return `<div class="sect" style="padding-top:30px">
     <h1 style="font-size:36px;margin:0 0 6px">견적·상담 신청</h1>
@@ -497,7 +532,7 @@ function screenApplySingle() {
     ${configBanner()}${errorBanner()}
     <div class="two-col">
       <div style="display:grid;gap:28px">
-        <div><h3 style="font-size:19px;margin:0 0 12px">제출 국가 <span class="req">*</span></h3>${chips('country', COUNTRIES)}</div>
+        <div><h3 style="font-size:19px;margin:0 0 12px">제출 국가 <span class="req">*</span></h3>${chips('country', COUNTRIES)}${countryOtherField()}</div>
         <div><h3 style="font-size:19px;margin:0 0 12px">서류 종류 <span class="req">*</span></h3>${chips('doc', DOCS)}</div>
         <div><h3 style="font-size:19px;margin:0 0 12px">인증 방식</h3>${chips('cert', CERTS)}</div>
         <div><h3 style="font-size:19px;margin:0 0 12px">신청자 정보</h3>${contactFields()}</div>
@@ -600,11 +635,18 @@ document.addEventListener('click', (e) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
-  if (t.dataset.pick) { set({ [t.dataset.pick]: t.dataset.val, error: null }); return; }
+  if (t.dataset.pick) {
+    set({ [t.dataset.pick]: t.dataset.val, error: null });
+    // '기타' 를 골랐으면 바로 적을 수 있게 커서를 넣어 준다
+    if (t.dataset.pick === 'country' && t.dataset.val === COUNTRY_OTHER) {
+      document.getElementById('f-country-other')?.focus();
+    }
+    return;
+  }
   if (t.dataset.set) { set({ [t.dataset.set]: t.dataset.val }); return; }
   if (t.dataset.reset) {
-    set({ orderNo: null, error: null, step: 1, country: null, doc: null, cert: '아포스티유',
-          name: '', phone: '', email: '', memo: '' });
+    set({ orderNo: null, error: null, step: 1, country: null, countryOther: '', doc: null,
+          cert: '아포스티유', name: '', phone: '', email: '', memo: '' });
     return;
   }
   if (t.dataset.submit) { submit(); return; }
@@ -618,20 +660,26 @@ document.addEventListener('click', (e) => {
   }
 });
 
-/** 입력 중에는 화면을 다시 그리지 않으므로, 제출 버튼의 문구와 색만 직접 손본다.
- *  이걸 안 하면 이름·연락처를 다 채워도 버튼이 "입력해 주세요"에 멈춰 있다. */
-function syncSubmitButton() {
+/** 입력 중에는 화면을 다시 그리지 않으므로(커서와 한글 조합이 끊긴다), 값에 따라
+ *  달라지는 부분만 직접 손본다 — 요약에 표시된 국가 이름과 진행 버튼. */
+function syncLive() {
+  // '기타' 로 직접 적는 국가 이름은 요약과 안내문에 바로 비친다
+  document.querySelectorAll('[data-live="country"]').forEach((el) => {
+    el.textContent = pickedCountry() || '선택 전';
+  });
+
   if (state.screen !== 'apply' || state.orderNo || state.sending) return;
+
   const single = state.flow === 'single';
-  if (!single && state.step !== STEP_COUNT) return;
   const btn = document.querySelector(single ? '[data-submit]' : '[data-step="next"]');
   if (!btn) return;
 
-  const ok = validate() === null;
+  const ok = single ? validate() === null : stepReady(state.step);
   btn.classList.toggle('btn-primary', ok);
   btn.classList.toggle('btn-secondary', !ok);
-  btn.textContent = ok ? '상담 신청 보내기'
-    : single ? '국가·서류·연락처를 채워 주세요' : '이름과 연락처를 입력해 주세요';
+  btn.textContent = single
+    ? (ok ? '상담 신청 보내기' : '국가·서류·연락처를 채워 주세요')
+    : stepButtonLabel(state.step);
 }
 
 // 입력창은 다시 그리지 않고 상태만 받아 둔다.
@@ -639,7 +687,7 @@ document.addEventListener('input', (e) => {
   const f = e.target.dataset && e.target.dataset.field;
   if (!f) return;
   setQuiet({ [f]: e.target.value });
-  syncSubmitButton();
+  syncLive();
 });
 
 // 연락처 칸에서 Enter 를 누르면 바로 제출한다.
@@ -648,7 +696,14 @@ document.addEventListener('keydown', (e) => {
   const f = e.target.dataset && e.target.dataset.field;
   if (!f) return;
   if (f === 'trackInput') { set({ trackFound: true }); return; }
-  if (state.screen === 'apply' && !state.sending) { e.preventDefault(); submit(); }
+  if (state.screen !== 'apply' || state.sending) return;
+  e.preventDefault();
+  // 국가 입력칸에서 Enter 는 제출이 아니라 다음 단계로
+  if (f === 'countryOther' && state.flow !== 'single') {
+    if (stepReady(state.step)) set({ step: Math.min(state.step + 1, STEP_COUNT), error: null });
+    return;
+  }
+  submit();
 });
 
 render();
