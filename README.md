@@ -162,6 +162,62 @@ select order_no, created_at, name, phone, country, doc_type, cert_type, status
  order by created_at desc;
 ```
 
+## 새 신청 알림 메일
+
+신청이 들어오면 지정한 주소로 메일이 온다. 관리자 화면을 계속 열어 두지 않아도 된다.
+설정하지 않으면 알림만 안 가고 나머지는 정상 동작한다.
+
+### 1. Resend 가입 (무료)
+
+[resend.com](https://resend.com) 에 가입한다. 무료로 하루 100통, 월 3,000통까지 보낸다.
+
+가입 후 **API Keys → Create API Key** 로 키를 만든다. `re_` 로 시작하는 문자열이다.
+**이 키는 만들 때 한 번만 보여 주므로 그 자리에서 복사한다.**
+
+> 도메인 인증 없이 쓰면 발신 주소가 Resend 의 `onboarding@resend.dev` 로 고정되고,
+> **받는 주소는 Resend 에 가입한 본인 이메일만** 된다. 관리자 알림은 본인에게 오는
+> 것이니 이대로 충분하다. 나중에 `@hangyeol...` 같은 자기 도메인으로 보내려면 Resend 에서
+> 도메인을 인증하고 `notify_from` 설정을 추가한다.
+
+### 2. 키와 받을 주소 등록
+
+Supabase **SQL Editor** 에서 (`supabase/schema.sql` 12번 항목과 같은 내용):
+
+```sql
+insert into public.app_settings (key, value) values
+  ('resend_api_key', 're_붙여넣기'),
+  ('notify_email',   '내이메일@gmail.com')
+on conflict (key) do update set value = excluded.value, updated_at = now();
+```
+
+키는 `app_settings` 표에 들어가는데, 이 표는 `admins` 와 같은 방식으로 잠겨 있어서
+웹페이지나 API 로는 아무도 읽을 수 없다. 대시보드에서만 보인다.
+
+### 3. 확인
+
+고객 화면에서 신청을 한 건 넣어 본다. 메일이 오지 않으면 발송 결과를 본다:
+
+```sql
+select id, status_code, content, created
+  from net._http_response order by created desc limit 5;
+```
+
+| `status_code` | 뜻 |
+| --- | --- |
+| `200` | Resend 가 정상 접수. 메일함(스팸함도) 확인 |
+| `401` · `403` | API 키가 틀렸다 |
+| `422` | 받는 주소가 Resend 가입 이메일이 아니다 (도메인 미인증 상태의 제약) |
+| 아무 행도 없음 | 설정이 등록되지 않았다 — 2단계를 다시 확인 |
+
+### 알림 끄기
+
+```sql
+delete from public.app_settings where key = 'resend_api_key';
+```
+
+> 알림 메일에는 고객 이름·연락처가 담긴다. 담당자가 바로 연락하려면 필요한 정보지만,
+> 그만큼 그 메일함과 Resend 계정도 고객 정보를 담는 곳이 된다는 뜻이다.
+
 ## 화면 변형 미리보기
 
 디자인 비교용 변형은 URL 쿼리로 고른다. 고객에게 노출되는 UI 는 없다.
