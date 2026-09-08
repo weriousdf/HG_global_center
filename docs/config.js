@@ -40,5 +40,5 @@ window.HG_CONFIG = {
   SUPABASE_ANON_KEY: 'sb_publishable_KWhqjbE6t1a-NaEVIZoLzA_EGjpn5Sq',
 
   KAKAO_CHANNEL_URL:  '',
-  KAKAO_OPENCHAT_URL: '',
+  KAKAO_OPENCHAT_URL: 'https://open.kakao.com/o/sSXv2EMi',
 };
