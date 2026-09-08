@@ -84,8 +84,10 @@ const state = {
   error: null,
 
   // 진행상황 조회
-  trackInput: '',
-  trackFound: false,
+  trackPhone: '',      // 조회 화면에 입력한 휴대폰 번호
+  trackRows: null,     // 조회 결과. null=조회 전, []=일치하는 신청 없음
+  trackLoading: false,
+  trackError: null,
 };
 
 const STEP_COUNT = 4;
@@ -476,6 +478,7 @@ function screenDone() {
         <span class="order-no">${esc(state.orderNo)}</span>
       </div>
       <div class="btn-row" style="margin-top:22px">
+        <button type="button" class="btn btn-primary" style="font-size:14.5px;padding:11px 22px" data-track-mine="1">진행상황 조회</button>
         <button type="button" class="btn btn-secondary" style="font-size:14.5px;padding:11px 22px" data-reset="1">새 신청 작성</button>
         <button type="button" class="btn btn-ghost" style="font-size:14.5px" data-go="home">처음으로</button>
       </div>
@@ -574,66 +577,145 @@ function screenApply() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 화면 — 진행상황 조회 (아직 목업. 실제 조회는 다음 단계에서 붙인다)
+// 화면 — 진행상황 조회 (휴대폰 번호로 본인 확인)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const SAMPLE_TIMELINE = [
-  { label: '접수', when: '9월 2일', status: '완료', cls: 'tag-neutral' },
-  { label: '전문 번역', when: '9월 3–4일', status: '완료', cls: 'tag-neutral' },
-  { label: '공증 촉탁', when: '9월 5일', status: '완료', cls: 'tag-neutral' },
-  { label: '아포스티유 · 대사관 인증', when: '9월 8일', status: '진행중', cls: 'tag-accent' },
-  { label: '발송', when: '예정', status: '대기', cls: 'tag-outline' },
-];
+/** 진행 단계. 관리자가 이 순서로 상태를 넘긴다 (schema.sql 8번의 값과 같아야 한다). */
+const STAGES = ['접수', '번역', '공증', '인증', '발송'];
 
-const SAMPLE_ROWS = [
-  { doc: '졸업증명서', country: '미국', stage: '아포스티유', status: '진행중', cls: 'tag-accent' },
-  { doc: '성적증명서', country: '미국', stage: '아포스티유', status: '진행중', cls: 'tag-accent' },
-  { doc: '부모여행동의서', country: '미국', stage: '발송 준비', status: '완료', cls: 'tag-accent-2' },
-];
+/** 단계 이름을 고객이 읽을 문구로. 인증 단계는 신청한 인증 방식을 그대로 보여 준다. */
+function stageLabel(stage, certType) {
+  return {
+    접수: '접수',
+    번역: '전문 번역',
+    공증: '법무법인 공증',
+    인증: certType || '아포스티유 · 대사관 인증',
+    발송: '발송',
+  }[stage] ?? stage;
+}
+
+/** 지금 몇 번째 단계인지. '완료' 는 전 단계 통과로 본다. */
+function stageIndex(status) {
+  if (status === '완료') return STAGES.length;
+  const i = STAGES.indexOf(status);
+  return i < 0 ? 0 : i;
+}
+
+async function lookupTracking() {
+  const digits = state.trackPhone.replace(/[^0-9]/g, '');
+  if (digits.length < 9) {
+    set({ trackError: '휴대폰 번호를 정확히 입력해 주세요.', trackRows: null });
+    return;
+  }
+  if (configMissing()) {
+    set({ trackError: 'Supabase 연결 설정이 아직 비어 있습니다.', trackRows: null });
+    return;
+  }
+
+  set({ trackLoading: true, trackError: null });
+  try {
+    const res = await fetch(`${cfg.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/rpc/track_applications`, {
+      method: 'POST',
+      headers: {
+        apikey: cfg.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${cfg.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_phone: state.trackPhone.trim() }),
+    });
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`;
+      try {
+        const b = await res.json();
+        detail = b.message || b.hint || detail;
+      } catch { /* JSON 이 아니면 상태 코드만 */ }
+      throw new Error(detail);
+    }
+    set({ trackLoading: false, trackRows: await res.json(), trackError: null });
+  } catch (e) {
+    set({ trackLoading: false, trackRows: null, trackError: `조회하지 못했습니다. ${e.message}` });
+  }
+}
+
+/** 2026-09-08T05:12:34Z → 9월 8일 (한국 시간) */
+function dayText(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: 'long', day: 'numeric' });
+}
+
+/** 신청 한 건의 진행 카드. */
+function trackCard(row) {
+  const cancelled = row.status === '취소';
+  const cur = stageIndex(row.status);
+  const done = row.status === '완료';
+
+  const timeline = STAGES.map((stage, i) => {
+    const state_ = cancelled ? 'off' : i < cur ? 'done' : i === cur ? 'now' : 'off';
+    const bar = state_ === 'done' ? 'var(--color-accent-2-500)'
+      : state_ === 'now' ? 'var(--color-accent-500)'
+      : 'var(--color-neutral-300)';
+    const tag = state_ === 'done' ? ['완료', 'tag-accent-2']
+      : state_ === 'now' ? ['진행중', 'tag-accent']
+      : ['대기', 'tag-outline'];
+    return `<div class="tl-item">
+      <span class="tl-bar" style="background:${bar}"></span>
+      <span class="tl-label">${esc(stageLabel(stage, row.cert_type))}</span>
+      <span class="tag ${tag[1]}" style="align-self:flex-start;font-size:11px">${tag[0]}</span>
+    </div>`;
+  }).join('');
+
+  const badge = cancelled ? ['취소', 'tag-neutral']
+    : done ? ['발송 완료', 'tag-accent-2']
+    : ['진행중', 'tag-accent'];
+
+  return `<div class="card" style="padding:28px 30px;background:var(--color-surface);margin-top:20px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+      <h2 style="font-size:22px;margin:0;font-family:ui-monospace,Menlo,monospace">${esc(row.order_no)}</h2>
+      <span class="tag ${badge[1]}">${badge[0]}</span>
+      <span style="font-size:12.5px" class="muted-2">${esc(row.name_masked)}님 · ${esc(dayText(row.created_at))} 접수</span>
+    </div>
+    <div style="display:grid;gap:10px;margin-top:18px;max-width:420px">
+      <span class="summary-row"><span class="summary-key">제출 국가</span><span class="summary-val">${esc(row.country)}</span></span>
+      <span class="summary-row"><span class="summary-key">서류 종류</span><span class="summary-val">${esc(row.doc_type)}</span></span>
+      <span class="summary-row"><span class="summary-key">인증 방식</span><span class="summary-val">${esc(row.cert_type)}</span></span>
+    </div>
+    ${cancelled
+      ? '<p style="margin:22px 0 0;font-size:13.5px" class="muted">취소된 신청입니다. 문의가 필요하면 담당자에게 연락해 주세요.</p>'
+      : `<div class="timeline">${timeline}</div>`}
+  </div>`;
+}
 
 function screenTrack() {
-  const found = state.trackFound ? `<div style="margin-top:36px">
-    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
-      <h2 style="font-size:24px;margin:0">${esc(state.trackInput.trim() || '접수번호')}</h2>
-      <span class="tag tag-accent-2">진행중</span>
-      <span style="font-size:12.5px" class="muted-2">유학 구비서류 3건 · 미국 제출 · 접수 9월 2일</span>
-    </div>
-    <div class="timeline">
-      ${SAMPLE_TIMELINE.map((t) => `<div class="tl-item">
-        <span class="tl-bar"></span>
-        <span class="tl-label">${esc(t.label)}</span>
-        <span class="tl-when">${esc(t.when)}</span>
-        <span class="tag ${t.cls}" style="align-self:flex-start;font-size:11px">${esc(t.status)}</span>
-      </div>`).join('')}
-    </div>
-    <div style="margin-top:38px">
-      <h3 style="font-size:19px;margin:0 0 12px">서류별 상태</h3>
-      <div class="table-scroll">
-        <table class="table">
-          <thead><tr><th>서류</th><th>제출 국가</th><th>현재 단계</th><th>상태</th></tr></thead>
-          <tbody>
-            ${SAMPLE_ROWS.map((r) => `<tr>
-              <td style="font-weight:600">${esc(r.doc)}</td>
-              <td>${esc(r.country)}</td>
-              <td class="muted">${esc(r.stage)}</td>
-              <td><span class="tag ${r.cls}">${esc(r.status)}</span></td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>` : '<p style="margin-top:30px;font-size:14px" class="muted-2">접수번호를 입력하고 조회를 누르면 단계별 진행상황이 표시됩니다.</p>';
+  const rows = state.trackRows;
+
+  let result = '';
+  if (state.trackLoading) {
+    result = '<p style="margin-top:30px;font-size:14px" class="muted-2">조회하는 중…</p>';
+  } else if (rows === null) {
+    // 오류 배너가 이미 떠 있으면 같은 자리에 안내문을 또 붙이지 않는다
+    result = state.trackError ? ''
+      : '<p style="margin-top:30px;font-size:14px" class="muted-2">신청 시 남긴 휴대폰 번호를 입력하고 조회를 누르면 진행상황이 표시됩니다.</p>';
+  } else if (rows.length === 0) {
+    result = banner('warn', '일치하는 신청이 없습니다',
+      '입력한 번호로 접수된 신청을 찾지 못했습니다. 번호를 다시 확인해 주시고, 계속 보이지 않으면 담당자에게 문의해 주세요.');
+  } else {
+    result = `<p style="margin:30px 0 0;font-size:13.5px" class="muted">신청 ${rows.length}건</p>`
+      + rows.map(trackCard).join('');
+  }
 
   return `<div class="sect" style="padding-top:30px">
     <h1 style="font-size:36px;margin:0 0 6px">접수 진행상황 조회</h1>
-    <p style="font-size:14.5px;margin:0 0 22px" class="muted">신청 시 발급된 접수번호를 입력하세요.</p>
-    ${banner('warn', '준비 중인 화면',
-      '조회 기능은 아직 연결되지 않았습니다. 아래에 보이는 단계와 서류 목록은 화면 확인용 예시이며, 실제 접수 상태가 아닙니다. 진행 문의는 담당자에게 직접 연락해 주세요.')}
+    <p style="font-size:14.5px;margin:0 0 22px" class="muted">신청할 때 남긴 <strong>휴대폰 번호</strong>를 입력하세요. 그 번호로 접수된 신청이 모두 표시됩니다.</p>
+    ${state.trackError ? banner('error', '확인이 필요합니다', esc(state.trackError)) : ''}
     <div class="track-row">
-      <input class="input track-input" type="text" placeholder="예: HG-2609-0001" data-field="trackInput" value="${esc(state.trackInput)}">
-      <button type="button" class="btn btn-primary" style="font-size:14.5px;padding:12px 24px" data-track="1">조회</button>
+      <input class="input track-input" type="tel" inputmode="tel" autocomplete="tel"
+             placeholder="010-0000-0000" data-field="trackPhone" value="${esc(state.trackPhone)}">
+      <button type="button" class="btn btn-primary" style="font-size:14.5px;padding:12px 24px" data-track="1"
+              ${state.trackLoading ? 'disabled' : ''}>${state.trackLoading ? '조회 중…' : '조회'}</button>
     </div>
-    ${found}
+    <p style="margin:14px 0 0;font-size:12px" class="muted-2">접수번호는 필요하지 않습니다. 접수번호만으로 조회하게 두면 다른 사람의 진행상황이 노출될 수 있어, 본인 확인이 되는 휴대폰 번호로 조회합니다.</p>
+    ${result}
   </div>`;
 }
 
@@ -649,12 +731,16 @@ function render() {
 }
 
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-go],[data-pick],[data-set],[data-step],[data-submit],[data-reset],[data-track]');
+  const t = e.target.closest('[data-go],[data-pick],[data-set],[data-step],[data-submit],[data-reset],[data-track],[data-track-mine]');
   if (!t) return;
 
   if (t.dataset.go) {
     const to = t.dataset.go;
-    set({ screen: to, error: null, ...(to === 'apply' ? { orderNo: null } : {}) });
+    set({
+      screen: to, error: null,
+      ...(to === 'apply' ? { orderNo: null } : {}),
+      ...(to === 'track' ? { trackRows: null, trackError: null } : {}),
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
@@ -674,7 +760,13 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (t.dataset.submit) { submit(); return; }
-  if (t.dataset.track) { set({ trackFound: true }); return; }
+  if (t.dataset.trackMine) {
+    // 방금 신청한 본인이므로 남긴 번호를 그대로 채워 조회한다
+    set({ screen: 'track', trackPhone: state.phone, trackRows: null, trackError: null });
+    lookupTracking();
+    return;
+  }
+  if (t.dataset.track) { lookupTracking(); return; }
 
   if (t.dataset.step === 'prev') { set({ step: Math.max(1, state.step - 1), error: null }); return; }
   if (t.dataset.step === 'next') {
@@ -722,7 +814,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
   const f = e.target.dataset && e.target.dataset.field;
   if (!f) return;
-  if (f === 'trackInput') { set({ trackFound: true }); return; }
+  if (f === 'trackPhone') { lookupTracking(); return; }
   if (state.screen !== 'apply' || state.sending) return;
   e.preventDefault();
   // 국가 입력칸에서 Enter 는 제출이 아니라 다음 단계로

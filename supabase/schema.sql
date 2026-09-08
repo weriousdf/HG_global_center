@@ -155,7 +155,81 @@ create policy "관리자만 신청서를 읽는다"
 -- select a.email, a.added_at from public.admins a order by a.added_at;
 
 -- ---------------------------------------------------------------------------
--- 8. 확인용 — 대시보드에서 쌓인 신청서 보기
+-- 8. 진행 상태 값
+--    관리자가 이 순서로 상태를 넘긴다. 오타로 엉뚱한 값이 들어가면 고객 화면의
+--    단계 표시가 깨지므로 제약으로 묶어 둔다.
+-- ---------------------------------------------------------------------------
+alter table public.applications drop constraint if exists applications_status_check;
+alter table public.applications add constraint applications_status_check
+  check (status in ('접수', '번역', '공증', '인증', '발송', '완료', '취소'));
+
+-- ---------------------------------------------------------------------------
+-- 9. 진행상황 조회 — 휴대폰 번호로만 조회한다
+--
+--    접수번호로 조회하게 두면 안 된다. 접수번호는 HG-2609-0001, 0002 … 로 순차
+--    발급되므로 남의 번호를 찍어서 타인의 진행상황을 볼 수 있다.
+--    휴대폰 번호는 010-XXXX-XXXX 로 1억 가지여서 찍을 수 없다. 고객이 채울 칸도
+--    하나로 같다 — 더 안전하면서 더 간단하다.
+--
+--    돌려주는 것도 최소한으로 줄였다. 이름은 첫 글자만 남기고 가리고, 연락처·이메일·
+--    요청사항은 아예 내보내지 않는다. 진행상황을 보는 데 필요하지 않은 개인정보다.
+-- ---------------------------------------------------------------------------
+
+-- 010-1234-5678 / 01012345678 / +82 10-1234-5678 을 같은 값으로 비교하기 위한 정규화
+create or replace function public.normalize_phone(p text)
+returns text
+language sql
+immutable
+as $$
+  select regexp_replace(coalesce(p, ''), '[^0-9]', '', 'g');
+$$;
+
+create or replace function public.track_applications(p_phone text)
+returns table (
+  order_no    text,
+  name_masked text,
+  status      text,
+  created_at  timestamptz,
+  country     text,
+  doc_type    text,
+  cert_type   text
+)
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  v_digits text := public.normalize_phone(p_phone);
+begin
+  -- 자리수가 모자란 번호는 조용히 0건 (짧은 번호로 훑는 시도를 돕지 않는다)
+  if length(v_digits) < 9 then
+    return;
+  end if;
+
+  return query
+  select a.order_no,
+         left(a.name, 1) || repeat('*', greatest(char_length(a.name) - 1, 1)),
+         a.status,
+         a.created_at,
+         a.country,
+         a.doc_type,
+         a.cert_type
+    from public.applications a
+   where public.normalize_phone(a.phone) = v_digits
+   order by a.created_at desc;
+end;
+$$;
+
+revoke all on function public.track_applications(text) from public;
+grant execute on function public.track_applications(text) to anon, authenticated;
+
+-- 조회가 자주 일어나므로 정규화된 번호에 인덱스를 둔다
+create index if not exists applications_phone_digits_idx
+  on public.applications (public.normalize_phone(phone));
+
+-- ---------------------------------------------------------------------------
+-- 10. 확인용 — 대시보드에서 쌓인 신청서 보기
 -- ---------------------------------------------------------------------------
 -- select order_no, created_at, name, phone, country, doc_type, cert_type, status
 --   from public.applications order by created_at desc;
