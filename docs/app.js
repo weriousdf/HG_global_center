@@ -388,6 +388,64 @@ function renderKakaoFloat() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// 최상단 안심 안내 배너 (인포그래픽)
+//
+// 사용자가 준 원문을 그대로 쓰고, 오른쪽에 3단계 흐름 그림을 붙인다. 이미지 파일로
+// 만들지 않은 이유: 모바일에서 글씨가 작아지지 않고, 문구를 고칠 때 그림을 다시
+// 만들지 않아도 되고, 검색엔진이 텍스트로 읽는다.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** 3단계 아이콘. 외부 아이콘 묶음을 받지 않고 직접 그린다. */
+const INTRO_ICONS = {
+  // 말풍선 — 연락
+  chat: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M20 11.5c0 3.9-3.6 7-8 7-.9 0-1.8-.1-2.6-.4L5 20l1.2-3.3C4.8 15.4 4 13.5 4 11.5c0-3.9 3.6-7 8-7s8 3.1 8 7z"/>
+  </svg>`,
+  // 돋보기 + 서류 — 현재 상황 확인
+  check: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="11" cy="11" r="6"/><path d="M15.5 15.5 20 20"/><path d="M8.5 11l2 2 3.5-3.5"/>
+  </svg>`,
+  // 목록 — 준비 서류·진행 과정 안내
+  list: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M8 6h11M8 12h11M8 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>
+  </svg>`,
+};
+
+const INTRO_ARROW = `<svg class="intro-arrow" width="16" height="16" viewBox="0 0 24 24"
+  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+  stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>`;
+
+// 제목은 짧게, 설명에 내용을 담는다. 3칸으로 나누면 칸이 150px 정도라 제목이 길면
+// 글자가 꽉 차서 답답해진다.
+const INTRO_STEPS = [
+  { icon: 'chat',  title: '연락',      sub: '플러스카톡 · 오픈카톡 · 전화' },
+  { icon: 'check', title: '상황 확인', sub: '어디까지 준비되었는지' },
+  { icon: 'list',  title: '안내',      sub: '준비 서류와 진행 과정' },
+];
+
+function introBanner() {
+  const steps = INTRO_STEPS.map((st) => `<li class="intro-step">
+    <span class="intro-ico">${INTRO_ICONS[st.icon]}</span>
+    <span class="intro-step-body">
+      <span class="intro-step-title">${esc(st.title)}</span>
+      <span class="intro-step-sub">${esc(st.sub)}</span>
+    </span>
+  </li>`);
+
+  return `<section class="intro-banner" aria-label="상담 안내">
+    <div>
+      <p class="intro-lead">서류 준비가 처음이라<br>잘 모르시더라도 괜찮습니다.</p>
+      <p class="intro-body">플러스카톡, 오픈카톡, 전화 등 편하신 방법으로 연락해 주시면,<br class="wide-only">
+      현재 상황에 맞춰 준비하실 서류와 진행 과정을 알기 쉽게 안내해 드리겠습니다!</p>
+    </div>
+    <ol class="intro-steps">${steps.join(INTRO_ARROW)}</ol>
+  </section>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 화면 — 랜딩
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -430,6 +488,7 @@ function screenHome() {
   </section>`;
 
   return `
+  ${introBanner()}
   ${state.layout === 'a' ? heroA : heroB}
 
   <section class="sect">
