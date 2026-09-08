@@ -292,7 +292,7 @@ begin
   -- 설정이 없으면 조용히 넘어간다. 알림을 안 붙였다고 신청 저장이 막히면 안 된다.
   -- 자리표시 문구가 그대로 남아 있는 경우(키를 안 채우고 실행)도 같이 걸러낸다.
   if v_key is null or v_to is null or v_key = '' or v_to = ''
-     or v_key not like 're\_%' then
+     or left(v_key, 3) <> 're_' then
     return new;
   end if;
 
