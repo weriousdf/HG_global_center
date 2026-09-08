@@ -3,13 +3,15 @@
 //
 // 두 값은 대시보드의 서로 다른 화면에 있다 (2025년 개편 후 기준).
 //
-//   SUPABASE_URL
-//     왼쪽 아래 Project Settings → Data API → "Project URL"
-//     https://<프로젝트id>.supabase.co 형태
-//
 //   SUPABASE_ANON_KEY
-//     Project Settings → API Keys → "Publishable key"
-//     sb_publishable_... 로 시작한다. 예전 이름이 anon (public) 키였다.
+//     Project Settings → API → "Publishable key" (sb_publishable_... 로 시작)
+//     예전 이름은 anon (public) 키였다.
+//
+//   SUPABASE_URL
+//     주의: 위의 API 페이지에는 URL 이 없다. 주소창에서 만드는 게 가장 확실하다.
+//     대시보드 주소 .../dashboard/project/<프로젝트ref> 의 <프로젝트ref> 를 떼어내
+//     https://<프로젝트ref>.supabase.co 로 만든다.
+//     (라벨로 보고 싶으면 Project Settings → Data API 페이지에 있다.)
 //
 // ⚠️ 두 값 모두 반드시 따옴표 ' ' 안에 넣어야 한다. 따옴표를 빼면 JavaScript 가
 //    문자열이 아니라 변수 이름으로 읽어서 설정 전체가 만들어지지 않는다.

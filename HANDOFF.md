@@ -116,10 +116,13 @@ DB 안의 내용을 실제 고객 데이터로 취급하지 않는다 — 테이
 
 1. `config.js` 의 키에 따옴표를 빼면 JavaScript 가 문자열이 아니라 변수 이름으로 읽어서
    `window.HG_CONFIG` 자체가 만들어지지 않는다. 화면에는 "연결 설정 대기 중" 만 뜬다.
-2. Supabase 대시보드가 개편되어 두 값이 다른 화면에 있다.
-   **Project URL** 은 Settings → **Data API**, 키는 Settings → **API Keys** 의
-   *Publishable key* (`sb_publishable_...`, 예전 이름 anon/public). 같은 화면의
-   *Secret key* (`sb_secret_...`, 예전 service_role) 는 절대 쓰지 않는다.
+2. `Project Settings → API` 페이지에는 **키만 있고 Project URL 이 없다.** 사용자가
+   여기서 URL 을 찾다가 막혔다 (두 번째로 같은 곳에서 막혔다고 했다). URL 은 메뉴에서
+   찾지 말고 주소창의 프로젝트 ref 로 만드는 게 확실하다 —
+   `.../dashboard/project/<ref>` → `https://<ref>.supabase.co`.
+   라벨로 표시된 건 `Project Settings → Data API` 에 있지만 Supabase 가 이 메뉴 이름을
+   자주 바꾼다. 키는 *Publishable key* (`sb_publishable_...`, 예전 anon/public) 를 쓰고,
+   같은 화면의 *Secret key* (`sb_secret_...`, 예전 service_role) 는 절대 쓰지 않는다.
 
 ## 9. 남은 일
 

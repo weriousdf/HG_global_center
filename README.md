@@ -43,13 +43,24 @@ web/ 의 견적 신청 폼
 
 ### 2. 연결 키 넣기
 
-두 값은 대시보드의 **서로 다른 화면**에 있다. (Supabase 가 2025년에 개편해서, 예전
-"Project Settings → API" 한 화면에 다 있던 구성이 아니다.)
+두 값은 **같은 화면에 없다.** `Project Settings → API` 페이지에는 키만 있고 Project URL 은
+없다. 여기서 URL 을 찾다가 헤매기 쉽다.
 
-1. **Project Settings → Data API** → **Project URL** 복사
-   → `web/config.js` 의 `SUPABASE_URL`
-2. **Project Settings → API Keys** → **Publishable key** (`sb_publishable_...`) 복사
-   → `web/config.js` 의 `SUPABASE_ANON_KEY`
+**키** — `Project Settings → API` → **Publishable key** (`sb_publishable_...` 로 시작)
+→ `web/config.js` 의 `SUPABASE_ANON_KEY`
+
+**URL** — 메뉴를 헤매지 말고 **주소창에서 만드는 게 가장 확실하다.** 대시보드 주소가
+`https://supabase.com/dashboard/project/wxceyxdxxsepwzvdwkur` 형태인데, 뒤의
+`wxceyxdxxsepwzvdwkur` 가 프로젝트 ref 다. Project URL 은 항상 이 규칙이다:
+
+```
+https://<프로젝트ref>.supabase.co
+```
+
+→ `web/config.js` 의 `SUPABASE_URL`
+
+(대시보드에 라벨로 표시된 걸 보고 싶으면 `Project Settings → Data API` 페이지에 있다.
+다만 Supabase 는 이 메뉴 이름을 종종 바꾸므로, 위의 주소창 방식이 오래 간다.)
 
 결과가 이런 모양이어야 한다:
 
