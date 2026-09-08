@@ -95,6 +95,7 @@ const STEP_COUNT = 4;
 function set(patch) {
   Object.assign(state, patch);
   render();
+renderKakaoFloat();
 }
 
 /** 입력창 값은 화면 어디에도 되비추지 않으므로, 다시 그리지 않고 상태만 갱신한다.
@@ -349,6 +350,44 @@ function contactFields() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// 카카오톡 상담 버튼
+//
+// 채널·오픈채팅 모두 그냥 링크다. 모바일에서는 카카오톡 앱이, PC 에서는 카카오톡
+// PC 버전이나 웹이 열린다. config.js 에 주소를 넣지 않으면 버튼이 나오지 않는다.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** 말풍선 아이콘. 카카오 로고를 가져다 쓰지 않고 직접 그린다 (상표·의존성 회피). */
+const KAKAO_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+  <path fill="currentColor" d="M12 3C6.9 3 2.8 6.2 2.8 10.2c0 2.5 1.7 4.7 4.2 6L6.2 20c-.1.3.2.6.5.4l4-2.4c.4 0 .9.1 1.3.1 5.1 0 9.2-3.2 9.2-7.2S17.1 3 12 3z"/>
+</svg>`;
+
+/** 설정된 카카오 링크 목록. 채널을 먼저 둔다 (사업자 채널이 더 공식적이다). */
+function kakaoLinks() {
+  const out = [];
+  const ch = (cfg.KAKAO_CHANNEL_URL || '').trim();
+  const oc = (cfg.KAKAO_OPENCHAT_URL || '').trim();
+  if (ch) out.push({ url: ch, label: '카카오톡 채널 상담', short: '카카오톡 상담' });
+  if (oc) out.push({ url: oc, label: '오픈채팅으로 문의', short: '오픈채팅' });
+  return out;
+}
+
+/** 카카오 버튼 하나. target/rel 로 새 창에서 안전하게 연다. */
+function kakaoButton(link, { cls = '', style = '', short = false } = {}) {
+  return `<a class="btn btn-kakao ${cls}" style="${style}" href="${esc(link.url)}"
+    target="_blank" rel="noopener noreferrer">${KAKAO_ICON}${esc(short ? link.short : link.label)}</a>`;
+}
+
+/** 화면 오른쪽 아래 고정 버튼. #app 밖에 한 번만 그린다 (다시 그릴 이유가 없다). */
+function renderKakaoFloat() {
+  const box = document.getElementById('kakao-float');
+  if (!box) return;
+  const links = kakaoLinks();
+  box.innerHTML = links
+    .map((l, i) => kakaoButton(l, { cls: i > 0 ? 'sub' : '', short: true }))
+    .join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 화면 — 랜딩
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -363,6 +402,7 @@ function screenHome() {
         <div class="btn-row">
           <button type="button" class="btn btn-primary" style="font-size:15px;padding:12px 24px" data-go="apply">서류 견적 받기</button>
           <button type="button" class="btn btn-secondary" style="font-size:15px;padding:12px 22px" data-go="track">접수 진행상황 조회</button>
+          ${kakaoLinks().slice(0, 1).map((l) => kakaoButton(l, { style: 'font-size:15px;padding:12px 22px' })).join('')}
         </div>
       </div>
       <div class="card elev-md" style="padding:26px 28px;background:var(--color-surface)">
@@ -384,6 +424,7 @@ function screenHome() {
       <div class="btn-row">
         <button type="button" class="btn btn-primary" style="font-size:15px;padding:12px 24px" data-go="apply">견적·상담 신청</button>
         <button type="button" class="btn btn-ghost" style="font-size:15px" data-go="service">서비스 안내 보기</button>
+        ${kakaoLinks().slice(0, 1).map((l) => kakaoButton(l, { style: 'font-size:15px;padding:12px 22px' })).join('')}
       </div>
     </div>
   </section>`;
@@ -436,8 +477,14 @@ function screenHome() {
         <h3 style="font-size:26px;margin:0">국가와 서류만 알려주시면 견적을 드립니다</h3>
         <p style="font-size:14.5px;line-height:1.75;margin:12px 0 0;max-width:44ch">제출 국가·서류 종류·희망 일정에 따라 절차와 비용을 사전에 고정해 안내합니다.</p>
       </div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <button type="button" class="btn btn-primary" style="font-size:15px;padding:13px 26px" data-go="apply">견적·상담 신청</button>
+      <div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button type="button" class="btn btn-primary" style="font-size:15px;padding:13px 26px" data-go="apply">견적·상담 신청</button>
+        </div>
+        ${kakaoLinks().length ? `<div class="kakao-row" style="margin-top:14px">
+          ${kakaoLinks().map((l) => kakaoButton(l, { style: 'font-size:14px;padding:11px 20px' })).join('')}
+        </div>
+        <p class="muted-2" style="font-size:12px;margin:12px 0 0">전화·서류 준비가 어려우면 카카오톡으로 먼저 물어보셔도 됩니다.</p>` : ''}
       </div>
     </div>
   </section>`;

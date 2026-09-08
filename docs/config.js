@@ -21,7 +21,24 @@
 //    그 키는 모든 데이터를 읽고 지울 수 있어서, 웹페이지에 넣는 순간 누구나
 //    신청서 전체를 볼 수 있게 된다.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// 카카오톡 상담 버튼
+//
+// 두 값 모두 비워 두면 버튼이 화면에 나타나지 않는다. 하나만 넣어도 된다.
+//
+//   KAKAO_CHANNEL_URL  — 카카오톡 채널 (예전 이름 플러스친구)
+//     center-pf.kakao.com 에서 채널을 만들고, 관리자홈 → 채널 정보 의
+//     "채널 홈 URL" 을 복사한다. https://pf.kakao.com/_XXXXXXX 형태.
+//     뒤에 /chat 을 붙이면 채널 홈을 거치지 않고 바로 대화창이 열린다.
+//
+//   KAKAO_OPENCHAT_URL — 오픈채팅방
+//     카카오톡 앱 → 오픈채팅 탭 → 방 만들기 → 만든 방의 설정에서 링크 복사.
+//     https://open.kakao.com/o/XXXXXXX 형태.
+// ---------------------------------------------------------------------------
 window.HG_CONFIG = {
   SUPABASE_URL: 'https://wxceyxdxxsepwzvdwkur.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable_KWhqjbE6t1a-NaEVIZoLzA_EGjpn5Sq',
+
+  KAKAO_CHANNEL_URL:  '',
+  KAKAO_OPENCHAT_URL: '',
 };

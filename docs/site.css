@@ -160,3 +160,44 @@ h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-headi
   .apply-summary { position: static; }
   .site-footer { padding: 22px 18px 28px; }
 }
+
+/* ── 카카오톡 버튼 ──────────────────────────────────────────────────────────
+   카카오 노란색은 디자인 시스템 토큰이 아니지만 그대로 쓴다. 사람들이 이 색으로
+   상담 버튼을 찾기 때문에, 팔레트에 맞춰 색을 바꾸면 오히려 눈에 안 띈다.
+   모양(둥근 필, 간격, 폰트)만 시스템에 맞춘다. */
+.btn-kakao {
+  background: #fee500;
+  color: #191600;
+  border: 0;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-kakao:hover { background: #f5dc00; color: #191600; }
+.btn-kakao svg { flex: none; }
+
+/* 화면 오른쪽 아래 고정 버튼 — 어느 화면에서나 바로 문의할 수 있게 */
+.kakao-float {
+  position: fixed; right: 20px; bottom: 20px; z-index: 40;
+  display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
+}
+.kakao-float .btn-kakao {
+  box-shadow: 0 6px 20px rgba(46, 43, 37, .28);
+  font-size: 14px; padding: 12px 20px;
+}
+.kakao-float .btn-kakao.sub {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 4px 14px rgba(46, 43, 37, .2);
+}
+.kakao-float .btn-kakao.sub:hover { background: var(--color-neutral-200); }
+
+.kakao-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+@media (max-width: 720px) {
+  .kakao-float { right: 14px; bottom: 14px; gap: 8px; }
+  /* 좁은 화면에서는 글자를 빼고 아이콘만 남겨 본문을 덜 가린다 */
+  .kakao-float .btn-kakao { padding: 14px; font-size: 0; gap: 0; }
+  .kakao-float .btn-kakao svg { width: 22px; height: 22px; }
+}
