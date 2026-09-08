@@ -284,12 +284,15 @@ declare
   v_from text;
   v_when text;
 begin
-  select value into v_key  from public.app_settings where key = 'resend_api_key';
-  select value into v_to   from public.app_settings where key = 'notify_email';
-  select value into v_from from public.app_settings where key = 'notify_from';
+  -- 붙여넣을 때 딸려오는 줄바꿈·공백을 걸러낸다. 눈에 안 보여서 찾기 어려운 원인이다.
+  select btrim(value) into v_key  from public.app_settings where key = 'resend_api_key';
+  select btrim(value) into v_to   from public.app_settings where key = 'notify_email';
+  select btrim(value) into v_from from public.app_settings where key = 'notify_from';
 
   -- 설정이 없으면 조용히 넘어간다. 알림을 안 붙였다고 신청 저장이 막히면 안 된다.
-  if v_key is null or v_to is null then
+  -- 자리표시 문구가 그대로 남아 있는 경우(키를 안 채우고 실행)도 같이 걸러낸다.
+  if v_key is null or v_to is null or v_key = '' or v_to = ''
+     or v_key not like 're\_%' then
     return new;
   end if;
 
