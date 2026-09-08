@@ -1,0 +1,11 @@
+# 비밀값 — 절대 커밋하지 않는다
+.env
+.env.local
+*.key
+
+# 목업 내려받기 잔여물
+Incomplete mockup request.zip
+.thumbnail
+
+# 의존성
+node_modules/
