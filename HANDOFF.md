@@ -63,7 +63,7 @@ DB 안의 내용을 실제 고객 데이터로 취급하지 않는다 — 테이
 데이터를 저장할 방법이 없다. 또한 이 파일을 Claude Artifact 로 발행해도 **Artifact 페이지는
 보안 정책(CSP)상 외부 서버로의 fetch/XHR 이 전부 차단**되어 Supabase 를 호출할 수 없다.
 
-그래서 `web/` 에 빌드 도구 없는 일반 정적 웹사이트를 새로 만들고, 목업의 화면·문구·로직을
+그래서 `docs/` 에 빌드 도구 없는 일반 정적 웹사이트를 새로 만들고, 목업의 화면·문구·로직을
 그대로 옮겼다. 목업 파일은 참고용으로 남겨 두었다.
 
 디자인 비교용 변형(레이아웃 A/B, 위저드/한화면)은 버리지 않고 **URL 쿼리**로 옮겼다.
@@ -128,7 +128,13 @@ DB 안의 내용을 실제 고객 데이터로 취급하지 않는다 — 테이
 
 1. **배포** — GitHub Pages. 저장소는 만들어 두었다
    (github.com/weriousdf/HG_global_center, Public). Settings → Pages 에서
-   Source 를 `main` / `/web` 으로 지정하면 된다.
+   Source 를 `main` / `/docs` 로 지정하면 된다.
+
+   사이트 폴더가 `web/` 이 아니라 `docs/` 인 이유: GitHub Pages 의 "Deploy from a
+   branch" 방식은 폴더를 저장소 루트 `/` 와 `/docs` **두 곳만** 지원한다. 임의 폴더명은
+   드롭다운에 아예 나오지 않는다. `web/` 이름을 지키려면 GitHub Actions 워크플로로
+   배포해야 하는데, 프로토타입 단계에서 CI 를 하나 더 두는 것보다 폴더명을 맞추는 쪽이
+   단순해서 이름을 바꿨다.
 2. **진행상황 조회 연결** — 접수번호 + 휴대폰 뒷자리로 본인 확인하는 `track_application()`
    함수를 추가하고 화면을 붙인다. 현재는 예시 데이터 + "준비 중" 안내문 상태.
 3. 비용 표 실제 금액, 제휴 법무법인 수 입력 (현재 `[00,000]원` 자리표시)
@@ -143,18 +149,18 @@ DB 안의 내용을 실제 고객 데이터로 취급하지 않는다 — 테이
    * 테스트 행 `HG-2609-0001` 삭제, 시퀀스 초기화 여부 결정
    * 진행상황 조회 화면의 예시 타임라인·서류 목록과 "준비 중" 안내문
    * 비용 표의 `[00,000]원` 자리표시
-   * `web/index.html` 의 `noindex` 메타와 `web/robots.txt` — 지금은 검색엔진 수집을
+   * `docs/index.html` 의 `noindex` 메타와 `docs/robots.txt` — 지금은 검색엔진 수집을
      전면 차단해 두었다. 문구가 확정되기 전에 검색 결과에 뜨면 안 되기 때문이다.
 
 ## 10. 파일
 
 | 경로 | 무엇인가 |
 | --- | --- |
-| `web/index.html` | 페이지 껍데기 · 상단 내비 · 푸터 |
-| `web/app.js` | 화면 4개 · 상태 · 검증 · Supabase 저장 |
-| `web/site.css` | 사이트 전용 스타일 (디자인 시스템 위에 얹음) |
-| `web/organic.css` | Organic 디자인 시스템 (`_ds/` 에서 복사) |
-| `web/config.js` | Supabase URL · Publishable 키 — 입력 완료, 연결 확인됨 |
+| `docs/index.html` | 페이지 껍데기 · 상단 내비 · 푸터 |
+| `docs/app.js` | 화면 4개 · 상태 · 검증 · Supabase 저장 |
+| `docs/site.css` | 사이트 전용 스타일 (디자인 시스템 위에 얹음) |
+| `docs/organic.css` | Organic 디자인 시스템 (`_ds/` 에서 복사) |
+| `docs/config.js` | Supabase URL · Publishable 키 — 입력 완료, 연결 확인됨 |
 | `supabase/schema.sql` | 테이블 · 시퀀스 · RLS · 저장 함수 |
 | `README.md` | 셋업 · 배포 · 신청서 조회 방법 |
 | `.claude/launch.json` | 로컬 미리보기 서버 설정 (포트 5173) |

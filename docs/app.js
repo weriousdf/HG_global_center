@@ -173,7 +173,7 @@ async function submit() {
   if (problem) { set({ error: problem }); return; }
 
   if (configMissing()) {
-    set({ error: 'Supabase 연결 설정이 아직 비어 있습니다. web/config.js 의 SUPABASE_URL 과 SUPABASE_ANON_KEY 를 채워 주세요.' });
+    set({ error: 'Supabase 연결 설정이 아직 비어 있습니다. docs/config.js 의 SUPABASE_URL 과 SUPABASE_ANON_KEY 를 채워 주세요.' });
     return;
   }
 
@@ -208,7 +208,7 @@ function banner(kind, title, body) {
 function configBanner() {
   if (!configMissing()) return '';
   return banner('warn', '연결 설정 대기 중',
-    '<code>web/config.js</code> 에 Supabase 프로젝트 URL 과 anon 키를 넣으면 신청서가 실제로 저장됩니다. 지금은 제출이 막혀 있습니다.');
+    '<code>docs/config.js</code> 에 Supabase 프로젝트 URL 과 anon 키를 넣으면 신청서가 실제로 저장됩니다. 지금은 제출이 막혀 있습니다.');
 }
 
 function errorBanner() {

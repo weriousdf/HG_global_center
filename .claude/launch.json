@@ -4,7 +4,7 @@
     {
       "name": "hg-web",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5173", "--directory", "web"],
+      "runtimeArgs": ["-m", "http.server", "5173", "--directory", "docs"],
       "port": 5173
     }
   ]

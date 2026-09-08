@@ -7,7 +7,7 @@
 
 | 경로 | 무엇인가 |
 | --- | --- |
-| `web/` | **실동작 웹사이트.** 이걸 인터넷에 올린다. |
+| `docs/` | **실동작 웹사이트.** 이걸 인터넷에 올린다. 이름이 `docs` 인 이유는 아래 참고. |
 | `supabase/schema.sql` | Supabase 에 한 번 실행하는 테이블·함수 정의 |
 | `한결 글로벌문서 프로토타입.dc.html` | 초기 디자인 목업(참고용). 데이터 저장 기능은 없다. |
 | `_ds/organic-.../` | Organic 디자인 시스템 원본 |
@@ -18,7 +18,7 @@
 ```
 고객 브라우저                      Supabase (내 온라인 서버)
 ─────────────                     ──────────────────────────
-web/ 의 견적 신청 폼
+docs/ 의 견적 신청 폼
   국가 · 서류 · 인증방식
   이름 · 연락처 ──── HTTPS ────▶  submit_application() 함수
                                       │
@@ -47,7 +47,7 @@ web/ 의 견적 신청 폼
 없다. 여기서 URL 을 찾다가 헤매기 쉽다.
 
 **키** — `Project Settings → API` → **Publishable key** (`sb_publishable_...` 로 시작)
-→ `web/config.js` 의 `SUPABASE_ANON_KEY`
+→ `docs/config.js` 의 `SUPABASE_ANON_KEY`
 
 **URL** — 메뉴를 헤매지 말고 **주소창에서 만드는 게 가장 확실하다.** 대시보드 주소가
 `https://supabase.com/dashboard/project/wxceyxdxxsepwzvdwkur` 형태인데, 뒤의
@@ -57,7 +57,7 @@ web/ 의 견적 신청 폼
 https://<프로젝트ref>.supabase.co
 ```
 
-→ `web/config.js` 의 `SUPABASE_URL`
+→ `docs/config.js` 의 `SUPABASE_URL`
 
 (대시보드에 라벨로 표시된 걸 보고 싶으면 `Project Settings → Data API` 페이지에 있다.
 다만 Supabase 는 이 메뉴 이름을 종종 바꾸므로, 위의 주소창 방식이 오래 간다.)
@@ -98,8 +98,16 @@ python -m http.server 5173 --directory D:\aiffel_work\HG_global_center\web
 저장소는 이미 만들어져 있다 — <https://github.com/weriousdf/HG_global_center> (Public).
 
 1. 저장소 **Settings → Pages** 로 간다.
-2. Source 를 **Deploy from a branch** → 브랜치 `main` / 폴더 `/web` 로 지정하고 Save.
+2. Source 를 **Deploy from a branch** → 브랜치 `main` / 폴더 **`/docs`** 로 지정하고 Save.
 3. 몇 분 뒤 <https://weriousdf.github.io/HG_global_center/> 에서 열린다.
+
+> **사이트 폴더 이름이 왜 `docs` 인가**
+> GitHub Pages 의 "Deploy from a branch" 방식은 폴더를 **저장소 루트 `/` 와 `/docs` 두 곳만**
+> 지원한다. 임의의 폴더 이름은 고를 수 없다. 그래서 원래 `web/` 이던 폴더를 `docs/` 로
+> 바꿨다. 문서가 아니라 웹사이트가 들어 있다.
+>
+> 이름을 `web/` 으로 되돌리고 싶으면 GitHub Actions 워크플로로 배포하면 된다. 대신
+> 움직이는 부품이 하나 늘어난다.
 
 > Claude Artifact 로는 배포할 수 없다. Artifact 페이지는 보안 정책상 외부 서버로의
 > 통신이 차단되어 Supabase 를 호출하지 못한다.
