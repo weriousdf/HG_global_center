@@ -201,3 +201,21 @@ h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-headi
   .kakao-float .btn-kakao { padding: 14px; font-size: 0; gap: 0; }
   .kakao-float .btn-kakao svg { width: 22px; height: 22px; }
 }
+
+/* 사용자가 준 상담 안내 문구. 세 줄로 끊어 쓴 리듬을 넓은 화면에서는 그대로 살리고,
+   좁은 화면에서는 강제 줄바꿈을 없애 자연스럽게 흐르게 한다. */
+.kakao-invite {
+  /* CTA 밴드 그리드의 모든 칸을 가로지른다. 좁은 칸에 두면 세 줄이 또 접힌다.
+     너비를 제한하지 않고 위의 <br> 이 줄을 나누게 맡긴다. */
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  padding-top: 22px;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  font-size: 14px;
+  line-height: 1.8;
+  color: color-mix(in srgb, var(--color-text) 80%, transparent);
+}
+@media (max-width: 720px) {
+  .wide-only { display: none; }
+  .kakao-invite { font-size: 13px; }
+}

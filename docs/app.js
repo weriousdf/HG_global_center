@@ -483,9 +483,12 @@ function screenHome() {
         </div>
         ${kakaoLinks().length ? `<div class="kakao-row" style="margin-top:14px">
           ${kakaoLinks().map((l) => kakaoButton(l, { style: 'font-size:14px;padding:11px 20px' })).join('')}
-        </div>
-        <p class="muted-2" style="font-size:12px;margin:12px 0 0">전화·서류 준비가 어려우면 카카오톡으로 먼저 물어보셔도 됩니다.</p>` : ''}
+        </div>` : ''}
       </div>
+      ${/* 문구가 세 줄로 끊어 쓴 것이라, 좁은 칸에 넣으면 또 접힌다. 밴드 전체 폭을 쓴다. */ ''}
+      ${kakaoLinks().length ? `<p class="kakao-invite">서류 준비가 처음이라 잘 모르시더라도 괜찮습니다.<br class="wide-only">
+      플러스카톡, 오픈카톡, 전화 등 편하신 방법으로 연락해 주시면,<br class="wide-only">
+      현재 상황에 맞춰 준비하실 서류와 진행 과정을 알기 쉽게 안내해 드리겠습니다!</p>` : ''}
     </div>
   </section>`;
 }
