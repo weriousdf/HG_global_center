@@ -128,6 +128,29 @@ function phoneLooksValid(v) {
   return digits.length >= 9 && digits.length <= 15;
 }
 
+/** 저장할 연락처를 한 형식으로 맞춘다.
+ *
+ *  고객이 `01012349876` 으로 적든 `010-1234-9876` 으로 적든 같은 값이 저장되게 한다.
+ *  조회는 어차피 서버에서 숫자만 뽑아 비교하므로 동작에는 영향이 없지만, 관리자 목록에서
+ *  번호가 제각각으로 보이는 것을 막는다.
+ *
+ *  국내 휴대폰(11자리 01…)과 서울 국번(02) 만 하이픈을 넣고, 그 밖의 형태는 적은 대로
+ *  둔다. 국제번호를 어설프게 끊으면 오히려 못 알아보게 된다. */
+function formatPhone(v) {
+  const d = v.replace(/[^0-9]/g, '');
+  if (/^01[016789]\d{7,8}$/.test(d)) {
+    return d.length === 11
+      ? `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`
+      : `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+  }
+  if (/^02\d{7,8}$/.test(d)) {
+    return d.length === 10
+      ? `02-${d.slice(2, 6)}-${d.slice(6)}`
+      : `02-${d.slice(2, 5)}-${d.slice(5)}`;
+  }
+  return v.trim();
+}
+
 function emailLooksValid(v) {
   return v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
@@ -163,6 +186,18 @@ function validate() {
 
 const cfg = window.HG_CONFIG || {};
 
+/** 서버 오류를 고객에게 보여줄 문구로 바꾼다.
+ *
+ *  저장·조회 함수가 일부러 던지는 검증 메시지("이름을 입력해 주세요." 등)는 고객이
+ *  읽고 고칠 수 있으니 그대로 보여 준다. 반면 "Could not find the function …" 같은
+ *  기술적 오류는 고객이 할 수 있는 일이 없고 내부 구조만 드러내므로 감춘다.
+ *  판별은 한글이 섞였는지로 한다 — 우리가 던지는 메시지는 모두 한글이다.
+ *  원인은 콘솔에 남겨 두어 개발자가 확인할 수 있게 한다. */
+function friendlyError(raw, fallback) {
+  if (raw) console.error('[한결] 서버 응답:', raw);
+  return /[가-힣]/.test(raw || '') ? raw : fallback;
+}
+
 /** config.js 를 아직 채우지 않았으면 true. 이 경우 제출을 막고 안내를 띄운다. */
 function configMissing() {
   const u = cfg.SUPABASE_URL || '';
@@ -183,7 +218,7 @@ async function saveApplication() {
     },
     body: JSON.stringify({
       p_name: state.name.trim(),
-      p_phone: state.phone.trim(),
+      p_phone: formatPhone(state.phone),
       p_country: picked('country'),
       p_doc_type: picked('doc'),
       p_cert_type: state.cert,
@@ -221,7 +256,10 @@ async function submit() {
   } catch (e) {
     set({
       sending: false,
-      error: `신청서를 저장하지 못했습니다. ${e.message} — 잠시 후 다시 시도하거나 전화로 문의해 주세요.`,
+      error: friendlyError(
+        e.message,
+        '신청서를 저장하지 못했습니다. 잠시 후 다시 시도해 주시고, 계속 안 되면 담당자에게 연락해 주세요.',
+      ),
     });
   }
 }
@@ -633,7 +671,13 @@ async function lookupTracking() {
     }
     set({ trackLoading: false, trackRows: await res.json(), trackError: null });
   } catch (e) {
-    set({ trackLoading: false, trackRows: null, trackError: `조회하지 못했습니다. ${e.message}` });
+    set({
+      trackLoading: false, trackRows: null,
+      trackError: friendlyError(
+        e.message,
+        '조회하지 못했습니다. 잠시 후 다시 시도해 주시고, 계속 안 되면 담당자에게 연락해 주세요.',
+      ),
+    });
   }
 }
 
