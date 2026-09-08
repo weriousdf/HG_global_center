@@ -15,7 +15,8 @@
 DB 안의 내용을 실제 고객 데이터로 취급하지 않는다 — 테이블을 다시 만들거나 테스트 행을
 지우는 데 부담을 두지 않아도 된다.
 
-셋업 절차와 배포 방법은 [`README.md`](README.md) 에 있다. 이 문서는 결정 사항과 이력이다.
+프로젝트 현황·남은 일·아이디어는 [`README.md`](README.md), 셋업과 배포 절차는
+[`SETUP.md`](SETUP.md) 에 있다. 이 문서는 **왜 그렇게 만들었는지**와 작업 이력이다.
 
 ## 2. 확정된 전제 (사용자 응답)
 
@@ -394,7 +395,8 @@ delete from applications where name like '%테스트-삭제해도됨%';
 | `docs/organic.css` | Organic 디자인 시스템 (`_ds/` 에서 복사) |
 | `docs/config.js` | Supabase URL · Publishable 키 — 입력 완료, 연결 확인됨 |
 | `supabase/schema.sql` | 테이블 · 시퀀스 · RLS · 저장/조회 함수 · 관리자 권한 · 알림 트리거 |
-| `README.md` | 셋업 · 배포 · 신청서 조회 방법 |
+| `README.md` | 프로젝트 현황 — 완성된 것 · 보완할 것 · 아이디어 |
+| `SETUP.md` | 셋업 · 배포 · 신청서 조회 · 알림 설정 |
 | `.claude/launch.json` | 로컬 미리보기 서버 설정 (포트 5173) |
 | `한결 글로벌문서 프로토타입.dc.html` | 초기 디자인 목업 (참고용, 저장 기능 없음) |
 | `_ds/organic-.../` | 디자인 시스템 원본 |
