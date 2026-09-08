@@ -43,13 +43,31 @@ web/ 의 견적 신청 폼
 
 ### 2. 연결 키 넣기
 
-1. 대시보드 **Project Settings → API** 로 간다.
-2. **Project URL** 과 **Project API keys** 의 `anon` `public` 키를 복사한다.
-3. `web/config.js` 를 열어 두 값을 붙여넣는다.
+두 값은 대시보드의 **서로 다른 화면**에 있다. (Supabase 가 2025년에 개편해서, 예전
+"Project Settings → API" 한 화면에 다 있던 구성이 아니다.)
 
-> `anon` 키는 브라우저에 공개되도록 만들어진 키라서 이 파일에 넣어도 된다.
-> **`service_role` 키는 절대 넣지 않는다.** 그 키는 모든 데이터를 읽고 지울 수 있어서,
-> 웹페이지에 들어가는 순간 누구나 신청서 전체를 볼 수 있게 된다.
+1. **Project Settings → Data API** → **Project URL** 복사
+   → `web/config.js` 의 `SUPABASE_URL`
+2. **Project Settings → API Keys** → **Publishable key** (`sb_publishable_...`) 복사
+   → `web/config.js` 의 `SUPABASE_ANON_KEY`
+
+결과가 이런 모양이어야 한다:
+
+```js
+window.HG_CONFIG = {
+  SUPABASE_URL: 'https://abcdefghijklmnop.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_XXXXXXXXXXXXXXXXXXXXXXXX',
+};
+```
+
+> **따옴표를 빼먹지 않는다.** 따옴표가 없으면 JavaScript 가 문자열이 아니라 변수 이름으로
+> 읽어서 설정 전체가 만들어지지 않고, 신청 화면에 "연결 설정 대기 중" 만 계속 뜬다.
+
+> Publishable key 는 브라우저에 공개되도록 만들어진 키라서 이 파일에 넣어도 되고, 저장소에
+> 커밋해도 된다. (GitHub Pages 로 배포하면 브라우저가 이 파일을 받아가므로 커밋해야 한다.)
+> **같은 화면의 `Secret key` (`sb_secret_...`, 예전 `service_role`) 는 절대 넣지 않는다.**
+> 그 키는 모든 데이터를 읽고 지울 수 있어서, 웹페이지에 들어가는 순간 누구나 신청서
+> 전체를 볼 수 있게 된다.
 
 ### 3. 내 컴퓨터에서 확인
 
@@ -66,10 +84,11 @@ python -m http.server 5173 --directory D:\aiffel_work\HG_global_center\web
 
 고객이 접속할 수 있어야 하므로 정적 호스팅에 올린다. GitHub Pages 가 무료다.
 
-1. GitHub 에 새 저장소를 만든다 (예: `hg-global-center`).
-2. 이 폴더를 그 저장소에 올린다.
-3. 저장소 **Settings → Pages** → Source 를 `main` 브랜치 / `/web` 폴더로 지정.
-4. 몇 분 뒤 `https://<사용자명>.github.io/hg-global-center/` 에서 열린다.
+저장소는 이미 만들어져 있다 — <https://github.com/weriousdf/HG_global_center> (Public).
+
+1. 저장소 **Settings → Pages** 로 간다.
+2. Source 를 **Deploy from a branch** → 브랜치 `main` / 폴더 `/web` 로 지정하고 Save.
+3. 몇 분 뒤 <https://weriousdf.github.io/HG_global_center/> 에서 열린다.
 
 > Claude Artifact 로는 배포할 수 없다. Artifact 페이지는 보안 정책상 외부 서버로의
 > 통신이 차단되어 Supabase 를 호출하지 못한다.
