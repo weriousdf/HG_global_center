@@ -202,32 +202,11 @@ h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-headi
   .kakao-float .btn-kakao svg { width: 22px; height: 22px; }
 }
 
-/* 사용자가 준 상담 안내 문구. 세 줄로 끊어 쓴 리듬을 넓은 화면에서는 그대로 살리고,
-   좁은 화면에서는 강제 줄바꿈을 없애 자연스럽게 흐르게 한다. */
-.kakao-invite {
-  /* CTA 밴드 그리드의 모든 칸을 가로지른다. 좁은 칸에 두면 세 줄이 또 접힌다.
-     너비를 제한하지 않고 위의 <br> 이 줄을 나누게 맡긴다. */
-  grid-column: 1 / -1;
-  margin: 6px 0 0;
-  padding-top: 24px;
-  border-top: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
-
-  /* 사용자가 "중요한 글" 이라고 지정한 문구다. 굵게, 크게, 흐리지 않은 본문색으로.
-     제목 폰트(Jua)는 세 줄 본문에 쓰면 읽기 부담이 커서 본문 폰트의 굵기만 올린다. */
-  font-size: 19px;
-  font-weight: 700;
-  line-height: 1.75;
-  letter-spacing: -0.01em;
-  color: var(--color-text);
-}
-/* 강조로 글씨가 커진 만큼 세 줄이 들어갈 폭도 넓어졌다. 폭이 모자라면 사용자가 준
-   줄바꿈을 유지하는 것보다 자연스럽게 흐르게 하는 편이 낫다 — 강제 줄바꿈을 남기면
-   세 줄이 각각 또 접혀 들쭉날쭉해진다. */
+/* 최상단 안심 안내 배너의 문구는 사용자가 세 줄로 끊어 준 것이라 넓은 화면에서는 그
+   줄바꿈을 그대로 살린다. 폭이 모자라면 강제 줄바꿈을 없애 자연스럽게 흐르게 한다 —
+   그대로 두면 세 줄이 각각 또 접혀 들쭉날쭉해진다. */
 @media (max-width: 860px) {
   .wide-only { display: none; }
-}
-@media (max-width: 720px) {
-  .kakao-invite { font-size: 16.5px; padding-top: 20px; }
 }
 
 /* ── 최상단 안심 안내 배너 ──────────────────────────────────────────────────
